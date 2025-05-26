@@ -240,13 +240,11 @@ To better understand how Cypress works in practice, we'll use a simple Todo appl
 - Changing a task’s status (completed/incomplete)
 - Filtering tasks (by title or status)
 - Adding a task
-- Editing a task
 - Deleting a task (with confirmation via a modal)
-- Clearing the entire task list (also with confirmation via a modal)
 
-![Todo app](../resources/todo-app.png)
+This Todo application gives us a practical and concise example for end-to-end testing. It covers enough real-world functionality to demonstrate Cypress's core capabilities without overwhelming complexity.
 
-In this guide, we won't cover every single feature in tests to avoid repetition. Instead, we'll focus on **key scenarios** that illustrate the main approaches to E2E testing with Cypress.
+In the next section, we'll write our first basic test to verify that the list of tasks is displayed correctly.
 
 ## Basic Test
 
