@@ -107,7 +107,11 @@ The `ngComponentOutlet` directive accepts the following inputs to control compon
 - `ngComponentOutletContent`: Optional projectable content nodes
 - `ngComponentOutletNgModule`: Optional NgModule reference for dynamic module loading
 
-The directive also exposes the `componentInstance` property that provides a reference to the created component.
+While inputs can be provided declaratively using `ngComponentOutletInputs`, outputs (such as `@Output` events) must be handled imperatively by accessing the `componentInstance` property of the directive.
+This is demonstrated in the `ngAfterViewInit()` method, where the interaction event is subscribed to manually.
+
+> ⚠️ Angular automatically destroys components rendered via `*ngComponentOutlet` when the directive is removed from the view (e.g., using `*ngIf`) or when any of the bound inputs such as `component`, `inputs`, or `injector` change.
+> This means no manual cleanup (like calling `destroy()`) is needed when replacing or removing dynamically inserted components.
 
 ## Using `ViewContainerRef`
 
@@ -124,6 +128,7 @@ Components and directives can inject `ViewContainerRef` to manage their view con
 })
 export class DynamicMessagePanelComponent {
   private injector = inject(Injector);
+  private destroyRef = inject(DestroyRef);
   private viewContainer = inject(ViewContainerRef);
 
   protected showMessage(): void {
@@ -144,11 +149,18 @@ export class DynamicMessagePanelComponent {
     componentRef.instance.interaction.subscribe(() => {
       console.log('Component click occurred');
     });
+    this.destroyRef.onDestroy(() => componentRef.destroy()); // destroy the component when the view is destroyed
   }
 }
 ```
 
 Calling `createComponent()` returns a `ComponentRef`, representing the created component. Inputs are set via `setInput()`, and outputs can be subscribed to through the `instance`.
+
+> ⚠️ Components created via `viewContainerRef.createComponent()` are **not destroyed automatically**. If you're rendering temporary elements (e.g., snackbars, dialogs), make sure to manually clean them up using one of the following:
+>
+> - `componentRef.destroy()` — destroy a specific component
+> - `viewContainerRef.remove(index)` — remove by index
+> - `viewContainerRef.clear()` — remove all components in the container
 
 ### Inserting a Component at a Specific Template Location
 
@@ -312,6 +324,11 @@ The key method is `showSnackBar()`:
 - `createComponent()` — creates the component and requires an `environmentInjector` since it’s detached from any template
 - `attachView()` — attaches the component view to Angular’s change detection
 - `appendChild()` — manually appends the DOM node to the document
+
+> ⚠️ When creating components outside the Angular view tree using `createComponent()` and `ApplicationRef.attachView()`, you are entirely responsible for their **cleanup**. Once the component is no longer needed, you must explicitly perform two actions:
+>
+> 1.  Call `applicationRef.detachView(componentRef.hostView)` to remove the component's view from Angular's change detection.
+> 2.  Then, call `componentRef.destroy()` to clean up the component and free up resources.
 
 **SnackBar Usage Example**
 
