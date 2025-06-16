@@ -10,7 +10,9 @@ Modern web applications are becoming increasingly complex, and manual testing is
 
 3. [Environment Setup](#environment-setup)
 
-4. [Cypress Testing Basics](#cypress-testing-basics)
+4. [Architectural Patterns for E2E Tests](#architectural-patterns-for-e2e-tests)
+
+5. [Cypress Testing Basics](#cypress-testing-basics)
 
    - [Writing an E2E Test](#writing-an-e2e-test)
    - [Commands](#commands)
@@ -19,45 +21,48 @@ Modern web applications are becoming increasingly complex, and manual testing is
      - [Assertion Commands](#assertion-commands)
      - [Other Commands](#other-commands)
 
-5. [Example Application](#example-application)
+6. [Example Application](#example-application)
 
-6. [Basic Test](#basic-test)
+7. [Basic Test](#basic-test)
 
    - [Verifying Todo List Rendering](#verifying-todo-list-rendering)
    - [Verifying Todo Expansion and Collapse](#verifying-todo-expansion-and-collapse)
 
-7. [API Interaction](#api-interaction)
+8. [API Interaction](#api-interaction)
 
-8. [Creating Custom Commands](#creating-custom-commands)
+9. [Creating Custom Commands](#creating-custom-commands)
 
    - [Parent Commands](#parent-commands)
      - [getByTestId](#getbytestid)
      - [getByPlaceholder](#getbyplaceholder)
    - [Child Command](#child-command)
+   - [Importing Custom Commands](#importing-custom-commands)
    - [Usage](#usage)
 
-9. [Working with Forms](#working-with-forms)
+10. [Working with Forms](#working-with-forms)
 
-   - [Setup](#setup)
-   - [Navigating to the Create Page](#navigating-to-the-create-page)
-   - [Filling Out the Form](#filling-out-the-form)
-   - [Saving a New Todo](#saving-a-new-todo)
-   - [Form Validation](#form-validation)
-   - [Cancelling Creation](#cancelling-creation)
+    - [Setup](#setup)
+    - [Navigating to the Create Page](#navigating-to-the-create-page)
+    - [Filling Out the Form](#filling-out-the-form)
+    - [Saving a New Todo](#saving-a-new-todo)
+    - [Form Validation](#form-validation)
+    - [Cancelling Creation](#cancelling-creation)
 
-10. [Preparing Mock Data](#preparing-mock-data)
+11. [Preparing Mock Data](#preparing-mock-data)
 
     - [Intercept](#intercept)
     - [Fixture](#fixture)
     - [Managing Mock Data via API](#managing-mock-data-via-api)
 
-11. [User Scenarios](#user-scenarios)
+12. [Isolating Tests with before and after Hooks](#isolating-tests-with-before-and-after-hooks)
+
+13. [User Scenarios](#user-scenarios)
 
     - [Scenario One: Changing Todo Status](#scenario-one-changing-todo-status)
     - [Scenario Two: Filtering the Todo List](#scenario-two-filtering-the-todo-list)
     - [Scenario Three: Deleting a Todo Item](#scenario-three-deleting-a-todo-item)
 
-12. [Summary](#summary)
+14. [Summary](#summary)
 
 ## How E2E Tests Differ from Unit and Integration Tests
 
@@ -148,6 +153,39 @@ The `cypress` folder includes:
 - An `e2e` directory for end-to-end tests
 - A `support` directory for custom commands and helpers
 - A `fixtures` directory for test data
+
+## Architectural Patterns for E2E Tests
+
+While E2E tests focus on simulating user behavior across the entire application, structuring these tests effectively, especially in larger projects, is crucial for maintainability and scalability. Several architectural patterns can help organize your Cypress tests.
+
+| Pattern                   | When to Use                                                                              |
+| :------------------------ | :--------------------------------------------------------------------------------------- |
+| Page Object               | Quick start, simple flows, small projects                                                |
+| Screenplay                | Large apps, complex scenarios, many “actors”/roles                                       |
+| Custom Commands           | Extending the Cypress API for frequently repeated steps                                  |
+| App Actions               | Setting up test state directly via API calls or backend operations before UI interaction |
+| Data-Driven Testing       | Running the same test logic with multiple sets of input data                             |
+| Visual Regression Testing | Ensuring the UI looks as expected by comparing screenshots                               |
+
+**Page Object Model:**
+The Page Object Model (POM) is a design pattern used to create an object repository for UI elements within web applications. Each web page in the application has a corresponding Page Object class. This class contains methods that interact with elements on that web page. This helps in making tests more readable and maintainable by abstracting the details of the page's UI from the tests themselves.
+
+**Screenplay Pattern:**
+The Screenplay Pattern (also known as Actor-Centric Testing) is a more advanced pattern that focuses on users (or "actors") and their capabilities to perform actions on a system. It provides a highly cohesive and loosely coupled way to structure your tests, making them very expressive and easy to understand. It's particularly well-suited for large, complex applications with multiple user roles and intricate workflows.
+
+**Custom Commands:**
+As demonstrated in this guide (Section 8), Cypress allows you to create custom commands to encapsulate repetitive test steps or complex interactions. This enhances readability, reduces duplication, and makes your tests more robust by abstracting common actions into single, reusable commands.
+
+**App Actions:**
+This pattern involves interacting with the application directly via its internal APIs, database, or other mechanisms to set it into a specific state before initiating E2E tests. This avoids slow and potentially unstable UI interactions for test data preparation or initial state setup.
+
+**Data-Driven Testing:**
+This pattern involves executing the same set of test steps with different input data. Instead of writing a separate test for each data set, data is stored externally (e.g., JSON file, CSV, or Cypress fixtures), and the test script iterates through it.
+
+**Visual Regression Testing:**
+This pattern aims to detect unintended changes in the user interface. Tests capture UI screenshots and compare them against baseline (reference) screenshots taken previously. If differences are found, the test is marked as failed.
+
+> **TIP:** It's important to note that these architecture patterns are not mutually exclusive. In real projects, they are often used together. For example, Custom Commands can be part of the Page Object Model or Screenplay Pattern to group and reuse common UI interaction logic. App Actions can work well with any of these patterns to quickly and reliably set up test data or the initial app state, reducing the need for slow UI operations.
 
 ## Cypress Testing Basics
 
@@ -253,6 +291,8 @@ The first step is to ensure that the task list (`Todo list`) is displayed correc
 Since the application does not persist state between tests, you need to explicitly call `cy.visit('/')` before each test case:
 
 ```ts
+// cypress/e2e/todo-list.spec.cy.ts
+
 describe('Todo List Test', () => {
   beforeEach(() => {
     cy.visit('/');
@@ -267,6 +307,8 @@ describe('Todo List Test', () => {
 Let’s check that the task list is present on the page and that it’s not empty:
 
 ```ts
+// cypress/e2e/todo-list.spec.cy.ts
+
 it('should find todo list', () => {
   cy.get('[data-testid="todo-list"]').should('exist').and('have.class', 'todo-list');
 });
@@ -281,6 +323,8 @@ it('should have todo items', () => {
 Many Todo items contain a description that is hidden by default. We'll test that this description can be toggled using a button:
 
 ```ts
+// cypress/e2e/todo-list.spec.cy.ts
+
 it('should expand todo item', () => {
   cy.get('[data-testid="todo-item"]').first().as('todoItem');
   cy.get('@todoItem').find('.p-panel-toggler').click();
@@ -310,6 +354,8 @@ To synchronize test actions with API responses, we use the commands `cy.intercep
 Example setup in `beforeEach`:
 
 ```ts
+// cypress/e2e/todo-list.spec.cy.ts
+
 beforeEach(() => {
   cy.intercept('GET', Cypress.env('API_URL')).as('getTodos');
   cy.visit('/');
@@ -345,6 +391,8 @@ These commands do not depend on previous calls and always start a new chain. In 
 **1. Command logic**
 
 ```ts
+// cypress/support/commands.ts
+
 function getByTestId<E extends Node = Element>(
   testId: string,
   options?: Partial<Cypress.Loggable & Cypress.Timeoutable & Cypress.Withinable & Cypress.Shadow>
@@ -356,12 +404,16 @@ function getByTestId<E extends Node = Element>(
 **2. Registration**
 
 ```ts
+// cypress/support/commands.ts
+
 Cypress.Commands.add('getByTestId', getByTestId);
 ```
 
 **3. Extending global `cy` object**
 
 ```ts
+// cypress/support/commands.ts
+
 declare namespace Cypress {
   interface Chainable<Subject = any> {
     /**
@@ -383,6 +435,8 @@ declare namespace Cypress {
 Similarly:
 
 ```ts
+// cypress/support/commands.ts
+
 function getByPlaceholder<E extends Node = Element>(
   placeholder: string,
   options?: Partial<Cypress.Loggable & Cypress.Timeoutable & Cypress.Withinable & Cypress.Shadow>
@@ -417,6 +471,8 @@ A child command always comes in a chain after a parent or another child command 
 **1. Command logic and registration**
 
 ```ts
+// cypress/support/commands.ts
+
 Cypress.Commands.add('findByTestId', { prevSubject: 'element' }, (subject, testId, options) => {
   return cy.wrap(subject).find(`[data-testid="${testId}"]`, options);
 });
@@ -427,6 +483,8 @@ Cypress.Commands.add('findByTestId', { prevSubject: 'element' }, (subject, testI
 **2. Extending global `cy` object**
 
 ```ts
+// cypress/support/commands.ts
+
 declare namespace Cypress {
   interface Chainable<Subject = any> {
     ...
@@ -445,11 +503,27 @@ declare namespace Cypress {
 }
 ```
 
+### Importing Custom Commands
+
+For Cypress to recognize your new commands, you need to import them into the `cypress/support/e2e.ts` file. This file is automatically loaded before each test file runs, making it the ideal place for global configurations and imports like custom commands.
+
+Add the following line to your `cypress/support/e2e.ts` file:
+
+```ts
+// cypress/support/e2e.ts
+
+import './commands';
+```
+
+After this, your custom commands like `cy.getByTestId()`, `cy.getByPlaceholder()`, and `cy.findByTestId()` will be available in all your Cypress tests.
+
 ### Usage
 
 Here's how these commands can be used in tests:
 
 ```ts
+// cypress/e2e/todo-list.spec.cy.ts
+
 describe('Todo List Test', () => {
   beforeEach(() => {
     cy.intercept('GET', Cypress.env('API_URL')).as('getTodos');
@@ -493,6 +567,8 @@ Before each test we:
 - navigate to the form via the "Add Todo" button.
 
 ```ts
+// cypress/e2e/create-todo.spec.cy.ts
+
 describe('Create Todo Test', () => {
   const uniqueId = getTestId();
 
@@ -505,13 +581,21 @@ describe('Create Todo Test', () => {
 });
 ```
 
-> **Tip:** `uniqueId` will help us in following test cases as well as identifying Todos created during testing.
+> **Tip:** `uniqueId` will help us in following test cases as well as identifying Todos created during testing. To generate a `uniqueId`, you can use a simple helper function, such as:
+>
+> ```ts
+> function getTestId(): string {
+>   return Date.now().toString();
+> }
+> ```
 
 ### Navigating to the Create Page
 
 Let's verify that the **Add Todo** button actually navigates to the creation form page:
 
 ```ts
+// cypress/e2e/create-todo.spec.cy.ts
+
 it('should navigate to the Create page', () => {
   cy.url().should('eq', `${Cypress.config().baseUrl}create`);
   cy.contains('Create Todo').should('be.visible');
@@ -523,6 +607,8 @@ it('should navigate to the Create page', () => {
 Check field availability and the behavior of the save button.
 
 ```ts
+// cypress/e2e/create-todo.spec.cy.ts
+
 it('should fill in the form', () => {
   cy.getByTestId('save-todo').should('be.visible').and('be.disabled');
   cy.getByPlaceholder('Enter title').should('be.visible').and('be.enabled').type(`Test Todo ${uniqueId}`);
@@ -536,6 +622,8 @@ it('should fill in the form', () => {
 Test the main functionality — saving the Todo:
 
 ```ts
+// cypress/e2e/create-todo.spec.cy.ts
+
 it('should save todo item', () => {
   cy.getByPlaceholder('Enter title').type(`Test Todo ${uniqueId}`);
   cy.getByPlaceholder('Enter description').type('Test Description');
@@ -556,6 +644,8 @@ it('should save todo item', () => {
 Check that the form shows errors and disables saving when data is invalid:
 
 ```ts
+// cypress/e2e/create-todo.spec.cy.ts
+
 it('should validate form', () => {
   cy.getByPlaceholder('Enter title').as('titleInput').focus().blur();
   cy.contains('Value is required').should('be.visible');
@@ -573,6 +663,8 @@ it('should validate form', () => {
 Check that cancelling works and the new Todo is not created:
 
 ```ts
+// cypress/e2e/create-todo.spec.cy.ts
+
 it('should cancel todo item creation', () => {
   cy.getByPlaceholder('Enter title').type('Test Todo');
   cy.getByPlaceholder('Enter description').type('Test Description');
@@ -692,24 +784,38 @@ cy.request({
 - When you need to manage data within a single test (create → verify → delete);
 - For fast and flexible environment setup.
 
-## User Scenarios
+## Isolating Tests with `before` and `after` Hooks
 
-Now that we have covered the tools and basics of working with Cypress, let's apply them in practice and write full E2E tests for typical user scenarios:
+To ensure test isolation and reproducibility, it is crucial to manage test data effectively. Cypress provides `before` and `after` hooks that are ideal for setting up and tearing down test data.
 
-- changing the status of a todo,
-- filtering the list,
-- deleting with confirmation.
+- `before()`: Runs once before all tests in a `describe` block. Use it to set up global test data that all subsequent tests in that block will use.
+- `after()`: Runs once after all tests in a `describe` block. Use it to clean up any data created in the `before()` hook.
+- `beforeEach()`: Runs before each `it()` test. Use it to set up data specific to each test, ensuring a clean state for every test case.
+- `afterEach()`: Runs after each `it()` test. Use it to clean up data created in the `beforeEach()` hook.
 
-### Scenario One: Changing Todo Status
+**Example of Test Data Workflow with Hooks:**
 
-We will verify that a user can change the status of a todo item.
-
-#### Setup
-
-We use `createTestTodo()` and `removeTestTodo()` — helper functions that interact directly with the API. This allows us to create isolated test data and clean it up after the scenario runs. The code for these functions is as follows:
+We use `createTodoViaApi()` and `removeTodoViaApi()` — helper functions that interact directly with the API. This allows us to create isolated test data and clean it up after the scenario runs. The code for these functions is as follows:
 
 ```ts
-export const createTestTodo = (id: string | number) => {
+declare namespace Cypress {
+  interface Chainable<Subject = any> {
+    ...
+
+    /**
+     * Creates a test todo item directly via API.
+     * @param id Unique identifier for the todo.
+     */
+    createTodoViaApi(id: string | number): Chainable<any>;
+    /**
+     * Removes a test todo item directly via API.
+     * @param id Unique identifier of the todo to remove.
+     */
+    removeTodoViaApi(id: string | number): Chainable<any>;
+  }
+}
+
+Cypress.Commands.add('createTodoViaApi', (id: string | number) => {
   return cy.request({
     method: 'POST',
     url: Cypress.env('API_URL'),
@@ -720,24 +826,27 @@ export const createTestTodo = (id: string | number) => {
       isComplete: false,
     },
   });
-};
+});
 
-export const removeTestTodo = (id: string | number) => {
+Cypress.Commands.add('removeTodoViaApi', (id: string | number) => {
   return cy.request({
     method: 'DELETE',
     url: `${Cypress.env('API_URL')}/${id}`,
   });
-};
+});
 ```
 
-#### Test Cases
+Now, you can use these custom commands within your test files with Cypress's built-in hooks to manage the test data lifecycle. For instance, in a test scenario involving changing a todo's status, you might use them as follows:
 
 ```ts
+// cypress/e2e/todo-status.spec.cy.ts
+
 describe('Todo Status Change Test', () => {
   const uniqueId = getTestId();
 
   before(() => {
-    createTestTodo(uniqueId);
+    // Create the test todo item once before all tests in this describe block
+    cy.createTodoViaApi(uniqueId);
   });
 
   beforeEach(() => {
@@ -748,7 +857,8 @@ describe('Todo Status Change Test', () => {
   });
 
   after(() => {
-    removeTestTodo(uniqueId);
+    // Clean up the test todo item once after all tests in this describe block have run
+    cy.removeTodoViaApi(uniqueId);
   });
 
   it('should complete todo', () => {
@@ -772,7 +882,16 @@ describe('Todo Status Change Test', () => {
 });
 ```
 
-### Scenario Two: Filtering the Todo List
+By leveraging `cy.request()` within `before` and `after` hooks, combined with custom commands, you achieve a powerful and efficient way to manage test data. This ensures your tests are truly isolated, highly reproducible, and run consistently across different environments.
+
+## User Scenarios
+
+Now that we have covered the tools and basics of working with Cypress, let's apply them in practice and write full E2E tests for typical user scenarios:
+
+- filtering the list,
+- deleting with confirmation.
+
+### Scenario One: Filtering the Todo List
 
 In this test, we interact with `select` and `input` elements and verify the result by checking the number of displayed todos.
 
@@ -783,6 +902,8 @@ Instead of real API requests, we use a fixture with mock data. This speeds up te
 #### Test Cases
 
 ```ts
+// cypress/e2e/filter-todos.spec.cy.ts
+
 describe('Filter Todos Test', () => {
   beforeEach(() => {
     cy.fixture('stub-todo-list.json').then((todos) => {
@@ -841,7 +962,7 @@ describe('Filter Todos Test', () => {
 });
 ```
 
-### Scenario Three: Deleting a Todo Item
+### Scenario Two: Deleting a Todo Item
 
 We will test two cases:
 
@@ -852,18 +973,18 @@ Since deleting a todo requires confirmation via a modal dialog, we make sure the
 
 #### Setup
 
-This test will also use the `createTestTodo()` function to create test data that will later be deleted.
+This test will also use the `createTodoViaApi()` function to create test data that will later be deleted.
 
 #### Test Cases
 
 ```ts
-import { createTestTodo, getTestId } from '../../support/common';
+// cypress/e2e/delete-todo.spec.cy.ts
 
 describe('Delete Todo Test', () => {
   const uniqueId = getTestId();
 
   before(() => {
-    createTestTodo(uniqueId);
+    cy.createTodoViaApi(uniqueId);
   });
 
   beforeEach(() => {
@@ -902,6 +1023,7 @@ describe('Delete Todo Test', () => {
 In this guide, we have step-by-step covered the basics of end-to-end testing for Angular applications using Cypress. We have:
 
 - set up Cypress and integrated it into an Angular project;
+- explored various architectural patterns for structuring E2E tests, including Page Object Model, Screenplay Pattern, Custom Commands, App Actions, Data-Driven Testing, and Visual Regression Testing;
 - learned the basic test structure, commands, and user hooks;
 - mastered working with forms and asynchronous requests;
 - reviewed approaches to handling mock data—from intercepts to direct API requests.
