@@ -58,9 +58,8 @@ Modern web applications are becoming increasingly complex, and manual testing is
 
 13. [User Scenarios](#user-scenarios)
 
-    - [Scenario One: Changing Todo Status](#scenario-one-changing-todo-status)
-    - [Scenario Two: Filtering the Todo List](#scenario-two-filtering-the-todo-list)
-    - [Scenario Three: Deleting a Todo Item](#scenario-three-deleting-a-todo-item)
+    - [Scenario One: Filtering the Todo List](#scenario-one-filtering-the-todo-list)
+    - [Scenario Two: Deleting a Todo Item](#scenario-two-deleting-a-todo-item)
 
 14. [Summary](#summary)
 
